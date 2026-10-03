@@ -34,7 +34,7 @@ CHANNEL_2_LINK = "https://t.me/+VzwHuVRrPYljOGJl"
 BOT_USERNAME = "Son_Goku_07bot"
 
 
-# ==================== /START & ERROR-FREE DEEP-LINK HANDLER ====================
+# ==================== /START & BUTTON-FIXED DEEP-LINK HANDLER ====================
 @app.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message):
     first_name = message.from_user.first_name
@@ -46,28 +46,32 @@ async def start_handler(client, message):
             # Agar payload post format me hai (post_chatid_msgid)
             if payload.startswith("post_"):
                 parts = payload.split("_")
-                # Telegram channel IDs negative hoti hain aur unke aage -100 lagta hai
                 chat_id = int("-100" + parts[1])
                 msg_id = int(parts[2])
                 
                 try:
-                    sent_msg = await client.copy_message(
-                        chat_id=message.chat.id,
-                        from_chat_id=chat_id,
-                        message_id=msg_id
-                    )
+                    # Channel se original message fetch karein (buttons ke sath)
+                    orig_msg = await client.get_messages(chat_id, msg_id)
                 except Exception:
-                    # Agar -100 se na ho, toh bina -100 ke try karein
                     chat_id = int("-" + parts[1])
-                    sent_msg = await client.copy_message(
-                        chat_id=message.chat.id,
-                        from_chat_id=chat_id,
-                        message_id=msg_id
-                    )
+                    orig_msg = await client.get_messages(chat_id, msg_id)
+                
+                if orig_msg:
+                    sent_msg = None
+                    # Check karein ki message me kya hai aur waise hi send karein
+                    if orig_msg.photo:
+                        sent_msg = await orig_msg.copy(chat_id=message.chat.id)
+                    elif orig_msg.video:
+                        sent_msg = await orig_msg.copy(chat_id=message.chat.id)
+                    elif orig_msg.document:
+                        sent_msg = await orig_msg.copy(chat_id=message.chat.id)
+                    else:
+                        sent_msg = await orig_msg.copy(chat_id=message.chat.id)
                     
-                # 15 Minutes Auto-Delete Timer (900 seconds)
-                asyncio.create_task(delete_message_after_delay(sent_msg, 900))
-                return
+                    # 15 Minutes Auto-Delete Timer (900 seconds)
+                    if sent_msg:
+                        asyncio.create_task(delete_message_after_delay(sent_msg, 900))
+                    return
                 
         except Exception as e:
             print(f"Error handling start payload: {e}")
@@ -109,7 +113,6 @@ async def forwarded_message_handler(client, message):
             chat_id = message.forward_from_chat.id
             msg_id = message.forward_from_message_id
             
-            # Channel ID me se '-100' hata kar clean format banate hain taaki start link lamba na ho
             clean_chat_id = str(abs(chat_id)).replace("100", "", 1) if str(abs(chat_id)).startswith("100") else str(abs(chat_id))
             payload = f"post_{clean_chat_id}_{msg_id}"
         else:
@@ -149,5 +152,5 @@ async def delete_message_after_delay(message, delay: int):
 
 
 if __name__ == "__main__":
-    print("🤖 Son Goku Fixed Bot is running...")
+    print("🤖 Son Goku Final Bot is running...")
     app.run()
