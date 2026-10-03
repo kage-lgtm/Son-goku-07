@@ -30,8 +30,9 @@ CHANNEL_1_LINK = "https://t.me/dubxempirestudio"
 CHANNEL_2_NAME = "Join Channel 2"
 CHANNEL_2_LINK = "https://t.me/+VzwHuVRrPYljOGJl"
 
-# Admin User IDs (Yahan apni Telegram User ID daal sakte hain broadcast/ban ke liye)
-ADMINS = [123456789]  # Apni ID yahan rakh sakte hain
+# Bot ka username (Link banane ke liye)
+BOT_USERNAME = "Son_Goku_07bot"
+
 
 # ==================== /START & EPISODE HANDLER ====================
 @app.on_message(filters.command("start") & filters.private)
@@ -39,19 +40,20 @@ async def start_handler(client, message):
     first_name = message.from_user.first_name
     args = message.command
     
-    # Check karein agar user Mini App se episode parameter ke sath aaya hai
-    if len(args) > 1 and args[1].startswith("ep_"):
-        ep_id = args[1].split("ep_")[1]
+    # Check karein agar user Mini App ya deep-link se aaya hai
+    if len(args) > 1:
+        payload = args[1]
         
+        # Agar payload 'ep_' se hai ya koi file id/number hai
         caption = (
             f"🔥 **Hello {first_name}!** 🔥\n\n"
-            f"🎬 **EPISODE ID:** `{ep_id}`\n"
+            f"🎬 **CONTENT ID:** `{payload}`\n"
             "✨ Hindi Fan Dubbed • 1080p HD\n\n"
             "⚠️ **Warning:** Yeh message 15 minutes ke baad automatically delete ho jayega! Kripya link save kar lein."
         )
         
         watch_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📥 Watch / Download Episode", url="https://t.me/+YourPrivateChannelInviteLink")],
+            [InlineKeyboardButton("📥 Watch / Download Episode", url=f"https://t.me/{BOT_USERNAME}?start={payload}")],
             [InlineKeyboardButton(CHANNEL_1_NAME, url=CHANNEL_1_LINK)],
             [InlineKeyboardButton(CHANNEL_2_NAME, url=CHANNEL_2_LINK)]
         ])
@@ -91,62 +93,43 @@ async def start_handler(client, message):
             await message.reply_text(caption, reply_markup=welcome_keyboard)
 
 
-# ==================== FILE STORE & LINK COMMANDS ====================
+# ==================== REAL LINK GENERATOR (FORWARD HANDLER) ====================
+@app.on_message(filters.forwarded & filters.private)
+async def forwarded_message_handler(client, message):
+    """
+    Jab aap channel se koi post is bot par forward karenge, 
+    yeh handler uska unique payload/ID banakar link dega.
+    """
+    try:
+        # Forwarded message ki chat aur message ID se unique code banate hain
+        if message.forward_from_chat:
+            chat_id = message.forward_from_chat.id
+            msg_id = message.forward_from_message_id
+            
+            # Unique payload encode kar lete hain (jaise: c_chatid_msgid)
+            payload = f"post_{abs(chat_id)}_{msg_id}"
+            generated_link = f"https://t.me/{BOT_USERNAME}?start={payload}"
+            
+            await message.reply_text(
+                "✅ **Link Generated Successfully!**\n\n"
+                f"🔗 **Your Deep Link:**\n`{generated_link}`\n\n"
+                "Is link ko aap apne Ads / Mini App ke button ke peeche laga sakte hain.",
+                disable_web_page_preview=True
+            )
+        else:
+            await message.reply_text("⚠️ Kripya kisi Public/Private channel ki post ko directly forward karein.")
+    except Exception as e:
+        await message.reply_text(f"❌ Error generating link: {e}")
 
+
+# ==================== OTHER COMMANDS ====================
 @app.on_message(filters.command("genlink") & filters.private)
-async def genlink_handler(client, message):
-    await message.reply_text(
-        "🔗 **GenLink Command:**\n"
-        "Kisi bhi file ya message ka link banane ke liye us message ko is bot par forward karein ya channel me bot ko admin banakar post ka link bhejein."
-    )
+async def genlink_cmd(client, message):
+    await message.reply_text("🔗 **GenLink:** Aap apne channel se kisi bhi episode/poster message ko seedha is bot par **forward** karein, bot aapko uska link de dega!")
 
 @app.on_message(filters.command("batch") & filters.private)
-async def batch_handler(client, message):
-    await message.reply_text(
-        "📦 **Batch Link Command:**\n"
-        "Ek sath multiple messages ka link banane ke liye channel ke pehle aur aakhri message ka link ya forward use karein."
-    )
-
-@app.on_message(filters.command("universal_link") & filters.private)
-async def universal_link_handler(client, message):
-    await message.reply_text("🌐 **Universal Link:** Multiple messages ko kisi bhi clone se access karne ke liye yeh command hai.")
-
-@app.on_message(filters.command("custom_batch") & filters.private)
-async def custom_batch_handler(client, message):
-    await message.reply_text("📑 **Custom Batch:** Multiple random messages ko ek sath store karne ke liye.")
-
-@app.on_message(filters.command("special_link") & filters.private)
-async def special_link_handler(client, message):
-    await message.reply_text("⭐ **Special Link:** Editable links generate karne ke liye (Moderators only).")
-
-@app.on_message(filters.command("shortener") & filters.private)
-async def shortener_handler(client, message):
-    await message.reply_text("✂️ **Shortener:** Apne shareable links ko short karne ke liye settings configure karein.")
-
-@app.on_message(filters.command("settings") & filters.private)
-async def settings_handler(client, message):
-    await message.reply_text("⚙️ **Bot Settings:** Aap yahan apni zaroorat ke mutabiq auto-delete timer, force-subscription aur baaki cheezein customize kar sakte hain.")
-
-@app.on_message(filters.command("broadcast") & filters.private)
-async def broadcast_handler(client, message):
-    if message.from_user.id not in ADMINS:
-        await message.reply_text("❌ Aapke paas yeh command use karne ki permission nahi hai.")
-        return
-    await message.reply_text("📢 **Broadcast:** Sabhi users ko message bhejne ke liye message aage forward karein.")
-
-@app.on_message(filters.command("ban") & filters.private)
-async def ban_handler(client, message):
-    if message.from_user.id not in ADMINS:
-        await message.reply_text("❌ Yeh command sirf admin ke liye hai.")
-        return
-    await message.reply_text("🚫 **Ban User:** Kisi user ko ban karne ke liye use karein.")
-
-@app.on_message(filters.command("unban") & filters.private)
-async def unban_handler(client, message):
-    if message.from_user.id not in ADMINS:
-        await message.reply_text("❌ Yeh command sirf admin ke liye hai.")
-        return
-    await message.reply_text("✅ **Unban User:** Banned user ko hataane ke liye use karein.")
+async def batch_cmd(client, message):
+    await message.reply_text("📦 **Batch:** Multiple messages ke liye channel post ka link use karein.")
 
 
 # ==================== AUTO-DELETE FUNCTION ====================
@@ -159,5 +142,5 @@ async def delete_message_after_delay(message, delay: int):
 
 
 if __name__ == "__main__":
-    print("🤖 Son Goku Bot with Full Commands & DXE Studio is starting...")
+    print("🤖 Son Goku Bot with Forward-Link Generator is starting...")
     app.run()
