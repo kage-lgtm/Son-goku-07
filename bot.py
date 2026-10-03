@@ -24,14 +24,14 @@ app = Client(
 WELCOME_PHOTO_URL = "https://i.ibb.co/JjcNKKg4/IMG-20261003-121133-129.jpg"
 
 # Aapke Channels ke Naam aur Links
-CHANNEL_1_NAME = "ZK Dubbing Studio"
-CHANNEL_1_LINK = "https://t.me/ZK_Dubbing_Studio"
+CHANNEL_1_NAME = "DXE Studio"
+CHANNEL_1_LINK = "https://t.me/dubxempirestudio"
 
 CHANNEL_2_NAME = "Join Channel 2"
 CHANNEL_2_LINK = "https://t.me/+VzwHuVRrPYljOGJl"
 
 # Aapka Bot Username
-BOT_USERNAME = "Zk_dubbing_studio_bot"
+BOT_USERNAME = "Son_Goku_07bot"
 
 
 # ==================== /START & DEEP-LINK HANDLER ====================
@@ -63,7 +63,7 @@ async def start_handler(client, message):
                 # Agar Pyrogram ki standard file file_id hai
                 sent_msg = await client.copy_message(
                     chat_id=message.chat.id,
-                    from_chat_id=message.chat.id, # Fallback
+                    from_chat_id=message.chat.id,
                     message_id=int(payload) if payload.isdigit() else message.id
                 )
                 asyncio.create_task(delete_message_after_delay(sent_msg, 900))
@@ -71,7 +71,6 @@ async def start_handler(client, message):
                 
         except Exception as e:
             print(f"Error handling start payload: {e}")
-            # Fallback: Agar copy_message fail ho toh file ID samajh kar bhejne ki koshish karein
             try:
                 sent_msg = await client.send_cached_media(
                     chat_id=message.chat.id,
@@ -87,7 +86,7 @@ async def start_handler(client, message):
     # Normal /Start Command
     caption = (
         f"👋 **Hello {first_name}!**\n\n"
-        "✨ ZK Dubbing Studio bot me aapka swagat hai. Kripya neeche diye gaye channels ko join karein!"
+        "✨ DXE Studio bot me aapka swagat hai. Kripya neeche diye gaye channels ko join karein!"
     )
     
     welcome_keyboard = InlineKeyboardMarkup([
@@ -123,7 +122,6 @@ async def forwarded_message_handler(client, message):
             msg_id = message.forward_from_message_id
             payload = f"post_{abs(chat_id)}_{msg_id}"
         else:
-            # Agar direct media file hai toh uska message id use kar lenge
             payload = str(message.id)
             
         generated_link = f"https://t.me/{BOT_USERNAME}?start={payload}"
@@ -162,5 +160,5 @@ async def delete_message_after_delay(message, delay: int):
 
 
 if __name__ == "__main__":
-    print("🤖 ZK Dubbing Studio Bot is running...")
+    print("🤖 Son Goku Bot is running...")
     app.run()
