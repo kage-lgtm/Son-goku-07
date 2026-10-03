@@ -1,8 +1,8 @@
+import asyncio
 import logging
 import os
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from supabase import create_client, Client as SupabaseClient
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -12,13 +12,6 @@ API_ID = 38215355
 API_HASH = "3f095c170be8c744b8f3d7f9c75ae544"
 BOT_TOKEN = "8555113283:AAFTY7YNDz52tNArdoeIMXpQwc8efMXTylA"
 
-# Aapka Supabase URL aur Key
-SUPABASE_URL = "https://nveowfitvoligqecxofr.supabase.co"
-SUPABASE_KEY = "sb_publishable_fqZzvMNKkcupSdiGMEtebA_J_UK9z9F"
-
-# Supabase Client initialize karein
-supabase: SupabaseClient = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 # Pyrogram Client initialize karein
 app = Client(
     "son_goku_bot",
@@ -27,119 +20,84 @@ app = Client(
     bot_token=BOT_TOKEN
 )
 
-# Aapka Private Channel / Episode Link
-CHANNEL_INVITE_LINK = "https://t.me/+YourPrivateChannelInviteLink"
+# Aapki nayi Welcome Image ka Direct URL
+WELCOME_PHOTO_URL = "https://i.ibb.co/JjcNKKg4/IMG-20261003-121133-129.jpg"
 
-# DXE Studio Channel Link (Button ke liye)
-DXE_CHANNEL_LINK = "https://t.me/dubxempirestudio"
+# Aapke Channels ke Naam aur Links
+CHANNEL_1_NAME = "DXE Studio"
+CHANNEL_1_LINK = "https://t.me/dubxempirestudio"
 
-@app.on_message(filters.command("start"))
+CHANNEL_2_NAME = "Join Channel 2"
+CHANNEL_2_LINK = "https://t.me/+VzwHuVRrPYljOGJl"
+
+@app.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message):
     user_id = message.from_user.id
     args = message.command
+    first_name = message.from_user.first_name
     
-    # Buttons layout (DXE Studio channel button)
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("DXE STUDIO", url=DXE_CHANNEL_LINK)]
-    ])
-    
-    # Aapka direct image link
-    PHOTO_URL = "https://files.catbox.moe/noia09.jpg"
-
-    # Check karein agar user Mini App ke "Send to Channel Bot" button se aaya hai
-    if len(args) > 1 and args[1].startswith("redeem_"):
-        code = args[1].split("_")[1]
+    # Check karein agar user Mini App se episode parameter ke sath aaya hai
+    if len(args) > 1 and args[1].startswith("ep_"):
+        ep_id = args[1].split("ep_")[1]
         
-        # Supabase database se check karein ki code exist karta hai aur unused hai
-        response = supabase.table("redeem_codes").select("*").eq("code", code).execute()
-        
-        if not response.data:
-            await message.reply_text("❌ **Invalid or non-existent redeem code!**")
-            return
-            
-        code_data = response.data[0]
-        
-        if code_data.get("is_used"):
-            await message.reply_text(
-                "❌ **This redeem code has already been used!**\n"
-                "Please generate a new code from the mini app."
-            )
-            return
-            
-        # Database me code ko used mark kar dein
-        supabase.table("redeem_codes").update({"is_used": True, "used_by": user_id}).eq("code", code).execute()
-        
-        # User ko episode link bhejein
-        await message.reply_text(
-            f"🔥 **HELLO DEAR {message.from_user.first_name}** 🔥\n\n"
-            "🎬 **YE RAHA AAPKA ANIME EPISODE** ⚡\n"
-            "ENJOY THE EPISODE 💙",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🌸 Watch Anime 🌸", url=CHANNEL_INVITE_LINK)],
-                [InlineKeyboardButton("DXE STUDIO", url=DXE_CHANNEL_LINK)]
-            ])
-        )
-        
-        # 15 min expiry warning message
-        await message.reply_text(
-            "⏳ **Warning:** This channel link will expire in 15 minutes! "
-            "Make sure to request to join now."
-        )
-    else:
-        # Normal Start message with Photo and DXE Studio Button
         caption = (
-            f"👋 **Hello {message.from_user.first_name}!**\n\n"
-            "✨ Send your Redeem Code here (or click `/redeem <code>`) "
-            "and I will provide your episode channel link!"
+            f"🔥 **Hello {first_name}!** 🔥\n\n"
+            f"🎬 **EPISODE ID:** `{ep_id}`\n"
+            "✨ Hindi Fan Dubbed • 1080p HD\n\n"
+            "⚠️ **Warning:** Yeh message 15 minutes ke baad automatically delete ho jayega! Kripya link save kar lein."
         )
+        
+        # Episode Watch/Download button aur dono channels ke buttons
+        watch_keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📥 Watch / Download Episode", url="https://t.me/+YourPrivateChannelInviteLink")],
+            [InlineKeyboardButton(CHANNEL_1_NAME, url=CHANNEL_1_LINK)],
+            [InlineKeyboardButton(CHANNEL_2_NAME, url=CHANNEL_2_LINK)]
+        ])
+        
+        try:
+            sent_msg = await message.reply_photo(
+                photo=WELCOME_PHOTO_URL,
+                caption=caption,
+                reply_markup=watch_keyboard
+            )
+            
+            # **15 Minutes Auto-Delete Timer (900 seconds)**
+            asyncio.create_task(delete_message_after_delay(sent_msg, 900))
+            
+        except Exception as e:
+            print(f"Episode send error: {e}")
+            await message.reply_text("❌ Kuch galat ho gaya. Kripya dobara try karein.")
+            
+    else:
+        # Normal Start Message with Image and Channel Buttons
+        caption = (
+            f"👋 **Hello {first_name}!**\n\n"
+            "✨ DXE Studio bot me aapka swagat hai. Kripya neeche diye gaye channels ko join karein!"
+        )
+        
+        welcome_keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(CHANNEL_1_NAME, url=CHANNEL_1_LINK)],
+            [InlineKeyboardButton(CHANNEL_2_NAME, url=CHANNEL_2_LINK)]
+        ])
+        
         try:
             await message.reply_photo(
-                photo=PHOTO_URL,
+                photo=WELCOME_PHOTO_URL,
                 caption=caption,
-                reply_markup=keyboard
+                reply_markup=welcome_keyboard
             )
         except Exception as e:
             print(f"Photo error: {e}")
-            await message.reply_text(caption, reply_markup=keyboard)
+            await message.reply_text(caption, reply_markup=welcome_keyboard)
 
-@app.on_message(filters.command("redeem"))
-async def redeem_handler(client, message):
-    if len(message.command) < 2:
-        await message.reply_text(
-            "⚠️ **Please provide your redeem code.**\n"
-            "Example: `/redeem U5RSM53J7J`"
-        )
-        return
-        
-    code = message.command[1].strip()
-    user_id = message.from_user.id
-    
-    # Supabase se check karein
-    response = supabase.table("redeem_codes").select("*").eq("code", code).execute()
-    
-    if not response.data:
-        await message.reply_text("❌ **Invalid or non-existent redeem code.**")
-        return
-        
-    code_data = response.data[0]
-    
-    if code_data.get("is_used"):
-        await message.reply_text("❌ **This redeem code has already been used!**")
-        return
-        
-    # Database me used mark karein
-    supabase.table("redeem_codes").update({"is_used": True, "used_by": user_id}).eq("code", code).execute()
-    
-    await message.reply_text(
-        "✅ **Code verified successfully!**\n\n"
-        "🎬 **YE RAHA AAPKA ANIME EPISODE**",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🌸 Watch Anime 🌸", url=CHANNEL_INVITE_LINK)],
-            [InlineKeyboardButton("DXE STUDIO", url=DXE_CHANNEL_LINK)]
-        ])
-    )
-    await message.reply_text("⏳ **Warning:** This channel link will expire in 15 minutes! Make sure to request to join now.")
+# 15 Minute Baad Message Delete Karne Wala Function
+async def delete_message_after_delay(message, delay: int):
+    await asyncio.sleep(delay)
+    try:
+        await message.delete()
+    except Exception:
+        pass
 
 if __name__ == "__main__":
-    print("🤖 Son Goku Bot with Image & DXE Studio is starting...")
+    print("🤖 Son Goku Bot with DXE Studio & Image is starting...")
     app.run()
