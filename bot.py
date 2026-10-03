@@ -20,7 +20,7 @@ app = Client(
     bot_token=BOT_TOKEN
 )
 
-# Aapki Welcome Image ka Direct URL
+# Aapki Welcome Image ka Direct URL (Sirf /start ke liye jab koi parameter na ho)
 WELCOME_PHOTO_URL = "https://i.ibb.co/JjcNKKg4/IMG-20261003-121133-129.jpg"
 
 # Aapke Channels ke Naam aur Links
@@ -30,67 +30,60 @@ CHANNEL_1_LINK = "https://t.me/dubxempirestudio"
 CHANNEL_2_NAME = "Join Channel 2"
 CHANNEL_2_LINK = "https://t.me/+VzwHuVRrPYljOGJl"
 
-# Bot ka username (Link banane ke liye)
+# Bot ka username
 BOT_USERNAME = "Son_Goku_07bot"
 
 
-# ==================== /START & EPISODE HANDLER ====================
+# ==================== /START & DEEP-LINK HANDLER ====================
 @app.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message):
     first_name = message.from_user.first_name
     args = message.command
     
-    # Check karein agar user Mini App ya deep-link se aaya hai
-    if len(args) > 1:
-        payload = args[1]
-        
-        # Agar payload 'ep_' se hai ya koi file id/number hai
-        caption = (
-            f"🔥 **Hello {first_name}!** 🔥\n\n"
-            f"🎬 **CONTENT ID:** `{payload}`\n"
-            "✨ Hindi Fan Dubbed • 1080p HD\n\n"
-            "⚠️ **Warning:** Yeh message 15 minutes ke baad automatically delete ho jayega! Kripya link save kar lein."
-        )
-        
-        watch_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📥 Watch / Download Episode", url=f"https://t.me/{BOT_USERNAME}?start={payload}")],
-            [InlineKeyboardButton(CHANNEL_1_NAME, url=CHANNEL_1_LINK)],
-            [InlineKeyboardButton(CHANNEL_2_NAME, url=CHANNEL_2_LINK)]
-        ])
-        
+    # Check karein agar user kisi specific post/episode link se aaya hai
+    if len(args) > 1 and args[1].startswith("post_"):
         try:
-            sent_msg = await message.reply_photo(
-                photo=WELCOME_PHOTO_URL,
-                caption=caption,
-                reply_markup=watch_keyboard
+            # Payload se chat_id aur message_id alag karein (Format: post_chatid_msgid)
+            parts = args[1].split("_")
+            chat_id = int("-" + parts[1])  # Negative sign wapas lagayein channel ID ke liye
+            msg_id = int(parts[2])
+            
+            # Original post ko channel se copy karke user ko bhejein
+            sent_msg = await client.copy_message(
+                chat_id=message.chat.id,
+                from_chat_id=chat_id,
+                message_id=msg_id
             )
+            
             # **15 Minutes Auto-Delete Timer (900 seconds)**
             asyncio.create_task(delete_message_after_delay(sent_msg, 900))
-        except Exception as e:
-            print(f"Episode send error: {e}")
-            await message.reply_text("❌ Kuch galat ho gaya. Kripya dobara try karein.")
+            return
             
-    else:
-        # Normal Start Message with Image and Channel Buttons
-        caption = (
-            f"👋 **Hello {first_name}!**\n\n"
-            "✨ DXE Studio bot me aapka swagat hai. Kripya neeche diye gaye channels ko join karein!"
-        )
-        
-        welcome_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(CHANNEL_1_NAME, url=CHANNEL_1_LINK)],
-            [InlineKeyboardButton(CHANNEL_2_NAME, url=CHANNEL_2_LINK)]
-        ])
-        
-        try:
-            await message.reply_photo(
-                photo=WELCOME_PHOTO_URL,
-                caption=caption,
-                reply_markup=welcome_keyboard
-            )
         except Exception as e:
-            print(f"Photo error: {e}")
-            await message.reply_text(caption, reply_markup=welcome_keyboard)
+            print(f"Error copying post: {e}")
+            await message.reply_text("❌ Yeh content ab available nahi hai ya link expired ho gaya hai.")
+            return
+
+    # Normal /Start Command (Jab koi deep link na ho)
+    caption = (
+        f"👋 **Hello {first_name}!**\n\n"
+        "✨ DXE Studio bot me aapka swagat hai. Kripya neeche diye gaye channels ko join karein!"
+    )
+    
+    welcome_keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(CHANNEL_1_NAME, url=CHANNEL_1_LINK)],
+        [InlineKeyboardButton(CHANNEL_2_NAME, url=CHANNEL_2_LINK)]
+    ])
+    
+    try:
+        await message.reply_photo(
+            photo=WELCOME_PHOTO_URL,
+            caption=caption,
+            reply_markup=welcome_keyboard
+        )
+    except Exception as e:
+        print(f"Photo error: {e}")
+        await message.reply_text(caption, reply_markup=welcome_keyboard)
 
 
 # ==================== REAL LINK GENERATOR (FORWARD HANDLER) ====================
@@ -98,22 +91,21 @@ async def start_handler(client, message):
 async def forwarded_message_handler(client, message):
     """
     Jab aap channel se koi post is bot par forward karenge, 
-    yeh handler uska unique payload/ID banakar link dega.
+    yeh handler uska exact deep link bana kar dega.
     """
     try:
-        # Forwarded message ki chat aur message ID se unique code banate hain
         if message.forward_from_chat:
             chat_id = message.forward_from_chat.id
             msg_id = message.forward_from_message_id
             
-            # Unique payload encode kar lete hain (jaise: c_chatid_msgid)
+            # Chat ID se negative sign hata kar clean payload banate hain
             payload = f"post_{abs(chat_id)}_{msg_id}"
             generated_link = f"https://t.me/{BOT_USERNAME}?start={payload}"
             
             await message.reply_text(
                 "✅ **Link Generated Successfully!**\n\n"
                 f"🔗 **Your Deep Link:**\n`{generated_link}`\n\n"
-                "Is link ko aap apne Ads / Mini App ke button ke peeche laga sakte hain.",
+                "Ab is link par click karne par wahi exact poster/anime show hoga!",
                 disable_web_page_preview=True
             )
         else:
@@ -127,10 +119,6 @@ async def forwarded_message_handler(client, message):
 async def genlink_cmd(client, message):
     await message.reply_text("🔗 **GenLink:** Aap apne channel se kisi bhi episode/poster message ko seedha is bot par **forward** karein, bot aapko uska link de dega!")
 
-@app.on_message(filters.command("batch") & filters.private)
-async def batch_cmd(client, message):
-    await message.reply_text("📦 **Batch:** Multiple messages ke liye channel post ka link use karein.")
-
 
 # ==================== AUTO-DELETE FUNCTION ====================
 async def delete_message_after_delay(message, delay: int):
@@ -142,5 +130,5 @@ async def delete_message_after_delay(message, delay: int):
 
 
 if __name__ == "__main__":
-    print("🤖 Son Goku Bot with Forward-Link Generator is starting...")
+    print("🤖 Son Goku Bot with Exact Post Forwarding is starting...")
     app.run()
