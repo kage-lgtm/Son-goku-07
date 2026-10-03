@@ -27,14 +27,27 @@ app = Client(
     bot_token=BOT_TOKEN
 )
 
-# Apna Private Channel / Episode Link yahan daalein
+# Aapka Private Channel / Episode Link
 CHANNEL_INVITE_LINK = "https://t.me/+YourPrivateChannelInviteLink"
+
+# DXE Studio Channel Link (Button ke liye)
+DXE_CHANNEL_LINK = "https://t.me/dubxempirestudio"
 
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
     user_id = message.from_user.id
     args = message.command
     
+    # Buttons layout (DXE Studio channel button)
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("DXE STUDIO", url=DXE_CHANNEL_LINK)]
+    ])
+    
+    # Aapka DXE Studio ka image URL (Aap chahein toh isko direct image link ya file_id se bhi bhej sakte hain)
+    # Note: Agar image local file se bhejni hai ya URL se, Pyrogram seedha URL se photo bhej deta hai.
+    # Hum yahan ek public image link ya placeholder use kar rahe hain, aap apna image ka direct link yahan daal sakte hain.
+    PHOTO_URL = "https://i.ibb.co/1G598Y8/dxe-studio.jpg" # (Aap ise apne image ke direct URL se replace kar sakte hain)
+
     # Check karein agar user Mini App ke "Send to Channel Bot" button se aaya hai
     if len(args) > 1 and args[1].startswith("redeem_"):
         code = args[1].split("_")[1]
@@ -64,7 +77,8 @@ async def start_handler(client, message):
             "🎬 **YE RAHA AAPKA ANIME EPISODE** ⚡\n"
             "ENJOY THE EPISODE 💙",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🌸 Watch Anime 🌸", url=CHANNEL_INVITE_LINK)]
+                [InlineKeyboardButton("🌸 Watch Anime 🌸", url=CHANNEL_INVITE_LINK)],
+                [InlineKeyboardButton("DXE STUDIO", url=DXE_CHANNEL_LINK)]
             ])
         )
         
@@ -74,12 +88,21 @@ async def start_handler(client, message):
             "Make sure to request to join now."
         )
     else:
-        # Normal Start message
-        await message.reply_text(
+        # Normal Start message with Photo and DXE Studio Button
+        caption = (
             f"👋 **Hello {message.from_user.first_name}!**\n\n"
-            "✨ Send your Redeem Code here (or use `/redeem <your_code>`) "
-            "to get your episode channel link!"
+            "✨ Send your Redeem Code here (or click `/redeem <code>`) "
+            "and I will provide your episode channel link!"
         )
+        try:
+            await message.reply_photo(
+                photo=PHOTO_URL,
+                caption=caption,
+                reply_markup=keyboard
+            )
+        except Exception:
+            # Fallback agar photo URL load hone me koi dikkat ho
+            await message.reply_text(caption, reply_markup=keyboard)
 
 @app.on_message(filters.command("redeem"))
 async def redeem_handler(client, message):
@@ -113,11 +136,12 @@ async def redeem_handler(client, message):
         "✅ **Code verified successfully!**\n\n"
         "🎬 **YE RAHA AAPKA ANIME EPISODE**",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🌸 Watch Anime 🌸", url=CHANNEL_INVITE_LINK)]
+            [InlineKeyboardButton("🌸 Watch Anime 🌸", url=CHANNEL_INVITE_LINK)],
+            [InlineKeyboardButton("DXE STUDIO", url=DXE_CHANNEL_LINK)]
         ])
     )
     await message.reply_text("⏳ **Warning:** This channel link will expire in 15 minutes! Make sure to request to join now.")
 
 if __name__ == "__main__":
-    print("🤖 Son Goku Bot with Supabase is starting...")
+    print("🤖 Son Goku Bot with Image & DXE Studio is starting...")
     app.run()
