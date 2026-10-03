@@ -43,10 +43,8 @@ async def start_handler(client, message):
         [InlineKeyboardButton("DXE STUDIO", url=DXE_CHANNEL_LINK)]
     ])
     
-    # Aapka DXE Studio ka image URL (Aap chahein toh isko direct image link ya file_id se bhi bhej sakte hain)
-    # Note: Agar image local file se bhejni hai ya URL se, Pyrogram seedha URL se photo bhej deta hai.
-    # Hum yahan ek public image link ya placeholder use kar rahe hain, aap apna image ka direct link yahan daal sakte hain.
-    PHOTO_URL = "https://i.ibb.co/1G598Y8/dxe-studio.jpg" # (Aap ise apne image ke direct URL se replace kar sakte hain)
+    # Aapka direct image link
+    PHOTO_URL = "https://files.catbox.moe/noia09.jpg"
 
     # Check karein agar user Mini App ke "Send to Channel Bot" button se aaya hai
     if len(args) > 1 and args[1].startswith("redeem_"):
@@ -100,8 +98,8 @@ async def start_handler(client, message):
                 caption=caption,
                 reply_markup=keyboard
             )
-        except Exception:
-            # Fallback agar photo URL load hone me koi dikkat ho
+        except Exception as e:
+            print(f"Photo error: {e}")
             await message.reply_text(caption, reply_markup=keyboard)
 
 @app.on_message(filters.command("redeem"))
