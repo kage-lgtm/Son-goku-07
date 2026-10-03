@@ -40,11 +40,9 @@ async def start_handler(client, message):
     first_name = message.from_user.first_name
     args = message.command
     
-    # Check karein agar user deep link (jaise file/post id) se aaya hai
     if len(args) > 1:
         payload = args[1]
         try:
-            # Agar payload post format me hai (post_chatid_msgid)
             if payload.startswith("post_"):
                 parts = payload.split("_")
                 chat_id = int("-" + parts[1])
@@ -55,12 +53,9 @@ async def start_handler(client, message):
                     from_chat_id=chat_id,
                     message_id=msg_id
                 )
-                # 15 Minutes Auto-Delete Timer (900 seconds)
                 asyncio.create_task(delete_message_after_delay(sent_msg, 900))
                 return
-            
             else:
-                # Agar Pyrogram ki standard file file_id hai
                 sent_msg = await client.copy_message(
                     chat_id=message.chat.id,
                     from_chat_id=message.chat.id,
@@ -68,7 +63,6 @@ async def start_handler(client, message):
                 )
                 asyncio.create_task(delete_message_after_delay(sent_msg, 900))
                 return
-                
         except Exception as e:
             print(f"Error handling start payload: {e}")
             try:
@@ -105,18 +99,17 @@ async def start_handler(client, message):
         await message.reply_text(caption, reply_markup=welcome_keyboard)
 
 
-# ==================== FORWARDED MESSAGE LINK GENERATOR ====================
+# ==================== CLEAN FORWARDED MESSAGE LINK GENERATOR ====================
 @app.on_message(filters.forwarded & filters.private)
 async def forwarded_message_handler(client, message):
     """
-    Jaise hi aap koi post forward karenge, pehle 'processing..' dikhayega,
-    phir exact link aur Share URL button generate karke dega.
+    Yeh handler forwarded message ki ID nikal kar bina forward tag ke 
+    ek clean link aur Share URL button generate karega.
     """
-    # Step 1: Send processing message
     proc_msg = await message.reply_text("processing..")
     
     try:
-        # Check karein ki message kisi channel se forward hua hai ya direct file hai
+        # Check karein ki message channel se hai ya user se
         if message.forward_from_chat:
             chat_id = message.forward_from_chat.id
             msg_id = message.forward_from_message_id
@@ -126,10 +119,10 @@ async def forwarded_message_handler(client, message):
             
         generated_link = f"https://t.me/{BOT_USERNAME}?start={payload}"
         
-        # Step 2: Delete processing message
+        # Processing message hata dein
         await proc_msg.delete()
         
-        # Step 3: Send final response with Share URL button
+        # Clean text message with SHARE URL button (No forward tag!)
         button = InlineKeyboardMarkup([
             [InlineKeyboardButton("📤 SHARE URL", url=f"https://t.me/share/url?url={generated_link}")]
         ])
@@ -160,5 +153,5 @@ async def delete_message_after_delay(message, delay: int):
 
 
 if __name__ == "__main__":
-    print("🤖 Son Goku Bot is running...")
+    print("🤖 Son Goku Bot is running cleanly...")
     app.run()
