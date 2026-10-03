@@ -34,7 +34,7 @@ CHANNEL_2_LINK = "https://t.me/+VzwHuVRrPYljOGJl"
 BOT_USERNAME = "Son_Goku_07bot"
 
 
-# ==================== /START & FILE-ID HANDLER ====================
+# ==================== /START & SMART DEEP-LINK HANDLER ====================
 @app.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message):
     first_name = message.from_user.first_name
@@ -43,34 +43,38 @@ async def start_handler(client, message):
     if len(args) > 1:
         payload = args[1]
         try:
-            # Agar payload file unique id hai, toh seedha media bhej dein
-            sent_msg = await client.send_cached_media(
-                chat_id=message.chat.id,
-                file_id=payload
-            )
-            # 15 Minutes Auto-Delete Timer (900 seconds)
-            asyncio.create_task(delete_message_after_delay(sent_msg, 900))
-            return
-        except Exception as e:
-            print(f"Error sending cached media: {e}")
-            # Fallback: Agar copy_message try karna ho
-            try:
+            # Check karein agar payload naye format (post_chatid_msgid) me hai
+            if payload.startswith("post_"):
                 parts = payload.split("_")
-                if len(parts) == 3:
-                    chat_id = int("-" + parts[1])
-                    msg_id = int(parts[2])
-                    sent_msg = await client.copy_message(
+                chat_id = int("-" + parts[1])
+                msg_id = int(parts[2])
+                
+                sent_msg = await client.copy_message(
+                    chat_id=message.chat.id,
+                    from_chat_id=chat_id,
+                    message_id=msg_id
+                )
+                asyncio.create_task(delete_message_after_delay(sent_msg, 900))
+                return
+            
+            else:
+                # Agar purana file_id format hai, toh cache media try karein
+                try:
+                    sent_msg = await client.send_cached_media(
                         chat_id=message.chat.id,
-                        from_chat_id=chat_id,
-                        message_id=msg_id
+                        file_id=payload
                     )
                     asyncio.create_task(delete_message_after_delay(sent_msg, 900))
                     return
-            except Exception as inner_e:
-                print(f"Fallback error: {inner_e}")
+                except Exception:
+                    # Agar file_id fail ho toh user ko batayein
+                    pass
                 
-            await message.reply_text("❌ Yeh content ab available nahi hai ya link expire ho gaya hai.")
-            return
+        except Exception as e:
+            print(f"Error handling start payload: {e}")
+            
+        await message.reply_text("❌ Yeh content ab available nahi hai ya link expire ho gaya hai.")
+        return
 
     # Normal /Start Command
     caption = (
@@ -94,47 +98,49 @@ async def start_handler(client, message):
         await message.reply_text(caption, reply_markup=welcome_keyboard)
 
 
-# ==================== FILE LINK GENERATOR ====================
-@app.on_message((filters.document | filters.video | filters.audio | filters.photo) & filters.private)
-async def file_handler(client, message):
+# ==================== ROBUST LINK GENERATOR ====================
+@app.on_message(filters.forwarded & filters.private)
+async def forwarded_message_handler(client, message):
     """
-    Jab aap bot par koi bhi file, video ya photo bhejenge,
-    yeh uska file_id nikal kar waisa hi lamba link bana dega.
+    Yeh handler channel ki original post ki chat_id aur message_id nikal kar 
+    ek 100% working deep link banata hai.
     """
     proc_msg = await message.reply_text("processing..")
     
     try:
-        # File ki unique file_id nikalte hain (jaisa doosre studios me hota hai)
-        if message.document:
-            file_id = message.document.file_id
-        elif message.video:
-            file_id = message.video.file_id
-        elif message.audio:
-            file_id = message.audio.file_id
-        elif message.photo:
-            file_id = message.photo.file_id
+        if message.forward_from_chat:
+            chat_id = message.forward_from_chat.id
+            msg_id = message.forward_from_message_id
+            payload = f"post_{abs(chat_id)}_{msg_id}"
         else:
-            file_id = None
+            # Agar direct file hai toh file_id use karenge
+            if message.document:
+                payload = message.document.file_id
+            elif message.video:
+                payload = message.video.file_id
+            elif message.audio:
+                payload = message.audio.file_id
+            elif message.photo:
+                payload = message.photo.file_id
+            else:
+                payload = str(message.id)
             
-        if file_id:
-            generated_link = f"https://t.me/{BOT_USERNAME}?start={file_id}"
-            
-            await proc_msg.delete()
-            
-            button = InlineKeyboardMarkup([
-                [InlineKeyboardButton("📤 SHARE URL", url=f"https://t.me/share/url?url={generated_link}")]
-            ])
-            
-            await message.reply_text(
-                f"Here is your link:\n\n`{generated_link}`",
-                reply_markup=button,
-                disable_web_page_preview=True
-            )
-        else:
-            await proc_msg.edit_text("⚠️ Kripya koi valid file ya video bhejें.")
-            
+        generated_link = f"https://t.me/{BOT_USERNAME}?start={payload}"
+        
+        await proc_msg.delete()
+        
+        button = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📤 SHARE URL", url=f"https://t.me/share/url?url={generated_link}")]
+        ])
+        
+        await message.reply_text(
+            f"Here is your link:\n\n`{generated_link}`",
+            reply_markup=button,
+            disable_web_page_preview=True
+        )
+        
     except Exception as e:
-        await proc_msg.edit_text(f"❌ Error: {e}")
+        await proc_msg.edit_text(f"❌ Error generating link: {e}")
 
 
 # ==================== /GENLINK COMMAND HANDLER ====================
@@ -153,5 +159,5 @@ async def delete_message_after_delay(message, delay: int):
 
 
 if __name__ == "__main__":
-    print("🤖 Son Goku File-ID Bot is running...")
+    print("🤖 Son Goku Robust Bot is running...")
     app.run()
