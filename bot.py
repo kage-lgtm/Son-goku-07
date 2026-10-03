@@ -5,9 +5,9 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 # Logging setup karein
 logging.basicConfig(level=logging.INFO)
 
-# Aapke Bot credentials
-API_ID = 29548231  # Standard API ID
-API_HASH = "your_api_hash_here"
+# Aapke Real API Credentials aur Bot Token
+API_ID = 38215355
+API_HASH = "3f095c170be8c744b8f3d7f9c75ae544"
 BOT_TOKEN = "8555113283:AAFTY7YNDz52tNArdoeIMXpQwc8efMXTylA"
 
 # Pyrogram Client initialize karein
