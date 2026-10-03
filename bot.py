@@ -7,14 +7,14 @@ from supabase import create_client, Client as SupabaseClient
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 
-# Aapke Credentials
+# Aapke Telegram Credentials
 API_ID = 38215355
 API_HASH = "3f095c170be8c744b8f3d7f9c75ae544"
 BOT_TOKEN = "8555113283:AAFTY7YNDz52tNArdoeIMXpQwc8efMXTylA"
 
-# Supabase Credentials (Yahan apni Supabase URL aur Anon/Service Key daal dein)
-SUPABASE_URL = "Aapki_Supabase_Project_URL_Yahan_Aayegi"
-SUPABASE_KEY = "Aapki_Supabase_Anon_Key_Yahan_Aayegi"
+# Aapka Supabase URL aur Key
+SUPABASE_URL = "https://nveowfitvoligqecxofr.supabase.co"
+SUPABASE_KEY = "sb_publishable_fqZzvMNKkcupSdiGMEtebA_J_UK9z9F"
 
 # Supabase Client initialize karein
 supabase: SupabaseClient = create_client(SUPABASE_URL, SUPABASE_KEY)
