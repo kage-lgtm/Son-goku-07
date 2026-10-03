@@ -34,7 +34,7 @@ CHANNEL_2_LINK = "https://t.me/+VzwHuVRrPYljOGJl"
 BOT_USERNAME = "Son_Goku_07bot"
 
 
-# ==================== /START & SMART DEEP-LINK HANDLER ====================
+# ==================== /START & ERROR-FREE DEEP-LINK HANDLER ====================
 @app.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message):
     first_name = message.from_user.first_name
@@ -43,38 +43,36 @@ async def start_handler(client, message):
     if len(args) > 1:
         payload = args[1]
         try:
-            # Check karein agar payload naye format (post_chatid_msgid) me hai
+            # Agar payload post format me hai (post_chatid_msgid)
             if payload.startswith("post_"):
                 parts = payload.split("_")
-                chat_id = int("-" + parts[1])
+                # Telegram channel IDs negative hoti hain aur unke aage -100 lagta hai
+                chat_id = int("-100" + parts[1])
                 msg_id = int(parts[2])
                 
-                sent_msg = await client.copy_message(
-                    chat_id=message.chat.id,
-                    from_chat_id=chat_id,
-                    message_id=msg_id
-                )
+                try:
+                    sent_msg = await client.copy_message(
+                        chat_id=message.chat.id,
+                        from_chat_id=chat_id,
+                        message_id=msg_id
+                    )
+                except Exception:
+                    # Agar -100 se na ho, toh bina -100 ke try karein
+                    chat_id = int("-" + parts[1])
+                    sent_msg = await client.copy_message(
+                        chat_id=message.chat.id,
+                        from_chat_id=chat_id,
+                        message_id=msg_id
+                    )
+                    
+                # 15 Minutes Auto-Delete Timer (900 seconds)
                 asyncio.create_task(delete_message_after_delay(sent_msg, 900))
                 return
-            
-            else:
-                # Agar purana file_id format hai, toh cache media try karein
-                try:
-                    sent_msg = await client.send_cached_media(
-                        chat_id=message.chat.id,
-                        file_id=payload
-                    )
-                    asyncio.create_task(delete_message_after_delay(sent_msg, 900))
-                    return
-                except Exception:
-                    # Agar file_id fail ho toh user ko batayein
-                    pass
                 
         except Exception as e:
             print(f"Error handling start payload: {e}")
-            
-        await message.reply_text("❌ Yeh content ab available nahi hai ya link expire ho gaya hai.")
-        return
+            await message.reply_text("❌ Yeh content ab available nahi hai ya link expire ho gaya hai.")
+            return
 
     # Normal /Start Command
     caption = (
@@ -98,12 +96,11 @@ async def start_handler(client, message):
         await message.reply_text(caption, reply_markup=welcome_keyboard)
 
 
-# ==================== ROBUST LINK GENERATOR ====================
+# ==================== FORWARDED POST HANDLER ====================
 @app.on_message(filters.forwarded & filters.private)
 async def forwarded_message_handler(client, message):
     """
-    Yeh handler channel ki original post ki chat_id aur message_id nikal kar 
-    ek 100% working deep link banata hai.
+    Yeh handler channel ki post ka sahi ID extract karke link banata hai.
     """
     proc_msg = await message.reply_text("processing..")
     
@@ -111,19 +108,12 @@ async def forwarded_message_handler(client, message):
         if message.forward_from_chat:
             chat_id = message.forward_from_chat.id
             msg_id = message.forward_from_message_id
-            payload = f"post_{abs(chat_id)}_{msg_id}"
+            
+            # Channel ID me se '-100' hata kar clean format banate hain taaki start link lamba na ho
+            clean_chat_id = str(abs(chat_id)).replace("100", "", 1) if str(abs(chat_id)).startswith("100") else str(abs(chat_id))
+            payload = f"post_{clean_chat_id}_{msg_id}"
         else:
-            # Agar direct file hai toh file_id use karenge
-            if message.document:
-                payload = message.document.file_id
-            elif message.video:
-                payload = message.video.file_id
-            elif message.audio:
-                payload = message.audio.file_id
-            elif message.photo:
-                payload = message.photo.file_id
-            else:
-                payload = str(message.id)
+            payload = f"post_{abs(message.chat.id)}_{message.id}"
             
         generated_link = f"https://t.me/{BOT_USERNAME}?start={payload}"
         
@@ -159,5 +149,5 @@ async def delete_message_after_delay(message, delay: int):
 
 
 if __name__ == "__main__":
-    print("🤖 Son Goku Robust Bot is running...")
+    print("🤖 Son Goku Fixed Bot is running...")
     app.run()
