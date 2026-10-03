@@ -1,14 +1,23 @@
 import logging
+import os
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from supabase import create_client, Client as SupabaseClient
 
-# Logging setup karein
+# Logging setup
 logging.basicConfig(level=logging.INFO)
 
-# Aapke Real API Credentials aur Bot Token
+# Aapke Credentials
 API_ID = 38215355
 API_HASH = "3f095c170be8c744b8f3d7f9c75ae544"
 BOT_TOKEN = "8555113283:AAFTY7YNDz52tNArdoeIMXpQwc8efMXTylA"
+
+# Supabase Credentials (Yahan apni Supabase URL aur Anon/Service Key daal dein)
+SUPABASE_URL = "Aapki_Supabase_Project_URL_Yahan_Aayegi"
+SUPABASE_KEY = "Aapki_Supabase_Anon_Key_Yahan_Aayegi"
+
+# Supabase Client initialize karein
+supabase: SupabaseClient = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Pyrogram Client initialize karein
 app = Client(
@@ -17,9 +26,6 @@ app = Client(
     api_hash=API_HASH,
     bot_token=BOT_TOKEN
 )
-
-# Temporary memory store (Production ke liye yahan Supabase Database connect karein)
-USED_CODES = set()
 
 # Apna Private Channel / Episode Link yahan daalein
 CHANNEL_INVITE_LINK = "https://t.me/+YourPrivateChannelInviteLink"
@@ -33,16 +39,24 @@ async def start_handler(client, message):
     if len(args) > 1 and args[1].startswith("redeem_"):
         code = args[1].split("_")[1]
         
-        # Check karein code pehle use toh nahi ho chuka
-        if code in USED_CODES:
+        # Supabase database se check karein ki code exist karta hai aur unused hai
+        response = supabase.table("redeem_codes").select("*").eq("code", code).execute()
+        
+        if not response.data:
+            await message.reply_text("❌ **Invalid or non-existent redeem code!**")
+            return
+            
+        code_data = response.data[0]
+        
+        if code_data.get("is_used"):
             await message.reply_text(
-                "❌ **This redeem code has already been used or expired!**\n"
+                "❌ **This redeem code has already been used!**\n"
                 "Please generate a new code from the mini app."
             )
             return
             
-        # Code ko mark kar de taaki dobara use na ho sake
-        USED_CODES.add(code)
+        # Database me code ko used mark kar dein
+        supabase.table("redeem_codes").update({"is_used": True, "used_by": user_id}).eq("code", code).execute()
         
         # User ko episode link bhejein
         await message.reply_text(
@@ -77,14 +91,23 @@ async def redeem_handler(client, message):
         return
         
     code = message.command[1].strip()
+    user_id = message.from_user.id
     
-    # Check karein code valid hai ya pehle use ho chuka hai
-    if code in USED_CODES:
-        await message.reply_text("❌ **Invalid, expired, or already used redeem code.**")
+    # Supabase se check karein
+    response = supabase.table("redeem_codes").select("*").eq("code", code).execute()
+    
+    if not response.data:
+        await message.reply_text("❌ **Invalid or non-existent redeem code.**")
         return
         
-    # Code ko use mark kar dein
-    USED_CODES.add(code)
+    code_data = response.data[0]
+    
+    if code_data.get("is_used"):
+        await message.reply_text("❌ **This redeem code has already been used!**")
+        return
+        
+    # Database me used mark karein
+    supabase.table("redeem_codes").update({"is_used": True, "used_by": user_id}).eq("code", code).execute()
     
     await message.reply_text(
         "✅ **Code verified successfully!**\n\n"
@@ -96,5 +119,5 @@ async def redeem_handler(client, message):
     await message.reply_text("⏳ **Warning:** This channel link will expire in 15 minutes! Make sure to request to join now.")
 
 if __name__ == "__main__":
-    print("🤖 Son Goku Bot is starting...")
+    print("🤖 Son Goku Bot with Supabase is starting...")
     app.run()
