@@ -43,14 +43,12 @@ async def start_handler(client, message):
     if len(args) > 1:
         payload = args[1]
         try:
-            # Agar payload post format me hai (post_chatid_msgid)
             if payload.startswith("post_"):
                 parts = payload.split("_")
                 chat_id = int("-100" + parts[1])
                 msg_id = int(parts[2])
                 
                 try:
-                    # Channel se original message fetch karein (buttons ke sath)
                     orig_msg = await client.get_messages(chat_id, msg_id)
                 except Exception:
                     chat_id = int("-" + parts[1])
@@ -58,7 +56,6 @@ async def start_handler(client, message):
                 
                 if orig_msg:
                     sent_msg = None
-                    # Check karein ki message me kya hai aur waise hi send karein
                     if orig_msg.photo:
                         sent_msg = await orig_msg.copy(chat_id=message.chat.id)
                     elif orig_msg.video:
@@ -68,17 +65,16 @@ async def start_handler(client, message):
                     else:
                         sent_msg = await orig_msg.copy(chat_id=message.chat.id)
                     
-                    # 15 Minutes Auto-Delete Timer (900 seconds)
                     if sent_msg:
                         asyncio.create_task(delete_message_after_delay(sent_msg, 900))
                     return
                 
         except Exception as e:
             print(f"Error handling start payload: {e}")
-            await message.reply_text("❌ Yeh content ab available nahi hai ya link expire ho gaya hai.")
+            sent_err = await message.reply_text("❌ Yeh content ab available nahi hai ya link expire ho gaya hai.")
+            asyncio.create_task(delete_message_after_delay(sent_err, 900))
             return
 
-    # Normal /Start Command
     caption = (
         f"👋 **Hello {first_name}!**\n\n"
         "✨ DXE Studio bot me aapka swagat hai. Kripya neeche diye gaye channels ko join karein!"
@@ -95,7 +91,6 @@ async def start_handler(client, message):
             caption=caption,
             reply_markup=welcome_keyboard
         )
-        # Welcome message ko bhi 15 min me delete karne ke liye
         asyncio.create_task(delete_message_after_delay(sent_msg, 900))
     except Exception as e:
         print(f"Photo error: {e}")
@@ -106,9 +101,6 @@ async def start_handler(client, message):
 # ==================== FORWARDED POST HANDLER ====================
 @app.on_message(filters.forwarded & filters.private)
 async def forwarded_message_handler(client, message):
-    """
-    Yeh handler channel ki post ka sahi ID extract karke link banata hai.
-    """
     proc_msg = await message.reply_text("processing..")
     
     try:
@@ -137,7 +129,8 @@ async def forwarded_message_handler(client, message):
         asyncio.create_task(delete_message_after_delay(sent_msg, 900))
         
     except Exception as e:
-        await proc_msg.edit_text(f"❌ Error generating link: {e}")
+        sent_err = await proc_msg.edit_text(f"❌ Error generating link: {e}")
+        asyncio.create_task(delete_message_after_delay(sent_err, 900))
 
 
 # ==================== /GENLINK COMMAND HANDLER ====================
@@ -150,17 +143,6 @@ async def genlink_cmd(client, message):
 # ==================== GENERAL MESSAGE AUTO-DELETE HANDLER ====================
 @app.on_message(filters.private & ~filters.command(["start", "genlink"]) & ~filters.forwarded)
 async def general_message_handler(client, message):
-    """
-    Bot par aane wale kisi bhi aam message (jo upar wale handlers me nahi aaye) 
-    ko 15 minutes (900 seconds) baad delete kar dega.
-    """
-    # Agar aap chahein toh user ke bheje hue message ko bhi turant ya baad me delete kar sakte hain:
-    # try:
-    #     await message.delete()
-    # except Exception:
-    #     pass
-    
-    # Agar bot ke reply ko delete karna hai:
     sent_msg = await message.reply_text("⚠️ Yeh bot sirf files/links ke liye hai. Yeh message 15 minutes me delete ho jayega.")
     asyncio.create_task(delete_message_after_delay(sent_msg, 900))
 
