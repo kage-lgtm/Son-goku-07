@@ -90,14 +90,17 @@ async def start_handler(client, message):
     ])
     
     try:
-        await message.reply_photo(
+        sent_msg = await message.reply_photo(
             photo=WELCOME_PHOTO_URL,
             caption=caption,
             reply_markup=welcome_keyboard
         )
+        # Welcome message ko bhi 15 min me delete karne ke liye
+        asyncio.create_task(delete_message_after_delay(sent_msg, 900))
     except Exception as e:
         print(f"Photo error: {e}")
-        await message.reply_text(caption, reply_markup=welcome_keyboard)
+        sent_msg = await message.reply_text(caption, reply_markup=welcome_keyboard)
+        asyncio.create_task(delete_message_after_delay(sent_msg, 900))
 
 
 # ==================== FORWARDED POST HANDLER ====================
@@ -126,11 +129,12 @@ async def forwarded_message_handler(client, message):
             [InlineKeyboardButton("📤 SHARE URL", url=f"https://t.me/share/url?url={generated_link}")]
         ])
         
-        await message.reply_text(
+        sent_msg = await message.reply_text(
             f"Here is your link:\n\n`{generated_link}`",
             reply_markup=button,
             disable_web_page_preview=True
         )
+        asyncio.create_task(delete_message_after_delay(sent_msg, 900))
         
     except Exception as e:
         await proc_msg.edit_text(f"❌ Error generating link: {e}")
@@ -139,7 +143,26 @@ async def forwarded_message_handler(client, message):
 # ==================== /GENLINK COMMAND HANDLER ====================
 @app.on_message(filters.command("genlink") & filters.private)
 async def genlink_cmd(client, message):
-    await message.reply_text("Send A Message For To Get Your Shareable Link")
+    sent_msg = await message.reply_text("Send A Message For To Get Your Shareable Link")
+    asyncio.create_task(delete_message_after_delay(sent_msg, 900))
+
+
+# ==================== GENERAL MESSAGE AUTO-DELETE HANDLER ====================
+@app.on_message(filters.private & ~filters.command(["start", "genlink"]) & ~filters.forwarded)
+async def general_message_handler(client, message):
+    """
+    Bot par aane wale kisi bhi aam message (jo upar wale handlers me nahi aaye) 
+    ko 15 minutes (900 seconds) baad delete kar dega.
+    """
+    # Agar aap chahein toh user ke bheje hue message ko bhi turant ya baad me delete kar sakte hain:
+    # try:
+    #     await message.delete()
+    # except Exception:
+    #     pass
+    
+    # Agar bot ke reply ko delete karna hai:
+    sent_msg = await message.reply_text("⚠️ Yeh bot sirf files/links ke liye hai. Yeh message 15 minutes me delete ho jayega.")
+    asyncio.create_task(delete_message_after_delay(sent_msg, 900))
 
 
 # ==================== AUTO-DELETE FUNCTION ====================
