@@ -33,6 +33,9 @@ CHANNEL_2_LINK = "https://t.me/+VzwHuVRrPYljOGJl"
 # Aapka Bot Username
 BOT_USERNAME = "Son_Goku_07bot"
 
+# Auto-delete time (10 minutes = 600 seconds)
+DELETE_DELAY = 600
+
 
 # ==================== /START & BUTTON-FIXED DEEP-LINK HANDLER ====================
 @app.on_message(filters.command("start") & filters.private)
@@ -56,23 +59,24 @@ async def start_handler(client, message):
                 
                 if orig_msg:
                     sent_msg = None
+                    # protect_content=True se content forward aur download nahi ho payega
                     if orig_msg.photo:
-                        sent_msg = await orig_msg.copy(chat_id=message.chat.id)
+                        sent_msg = await orig_msg.copy(chat_id=message.chat.id, protect_content=True)
                     elif orig_msg.video:
-                        sent_msg = await orig_msg.copy(chat_id=message.chat.id)
+                        sent_msg = await orig_msg.copy(chat_id=message.chat.id, protect_content=True)
                     elif orig_msg.document:
-                        sent_msg = await orig_msg.copy(chat_id=message.chat.id)
+                        sent_msg = await orig_msg.copy(chat_id=message.chat.id, protect_content=True)
                     else:
-                        sent_msg = await orig_msg.copy(chat_id=message.chat.id)
+                        sent_msg = await orig_msg.copy(chat_id=message.chat.id, protect_content=True)
                     
                     if sent_msg:
-                        asyncio.create_task(delete_message_after_delay(sent_msg, 900))
+                        asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
                     return
                 
         except Exception as e:
             print(f"Error handling start payload: {e}")
-            sent_err = await message.reply_text("❌ Yeh content ab available nahi hai ya link expire ho gaya hai.")
-            asyncio.create_task(delete_message_after_delay(sent_err, 900))
+            sent_err = await message.reply_text("❌ Yeh content ab available nahi hai ya link expire ho gaya hai.", protect_content=True)
+            asyncio.create_task(delete_message_after_delay(sent_err, DELETE_DELAY))
             return
 
     caption = (
@@ -89,19 +93,20 @@ async def start_handler(client, message):
         sent_msg = await message.reply_photo(
             photo=WELCOME_PHOTO_URL,
             caption=caption,
-            reply_markup=welcome_keyboard
+            reply_markup=welcome_keyboard,
+            protect_content=True
         )
-        asyncio.create_task(delete_message_after_delay(sent_msg, 900))
+        asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
     except Exception as e:
         print(f"Photo error: {e}")
-        sent_msg = await message.reply_text(caption, reply_markup=welcome_keyboard)
-        asyncio.create_task(delete_message_after_delay(sent_msg, 900))
+        sent_msg = await message.reply_text(caption, reply_markup=welcome_keyboard, protect_content=True)
+        asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
 
 
 # ==================== FORWARDED POST HANDLER ====================
 @app.on_message(filters.forwarded & filters.private)
 async def forwarded_message_handler(client, message):
-    proc_msg = await message.reply_text("processing..")
+    proc_msg = await message.reply_text("processing..", protect_content=True)
     
     try:
         if message.forward_from_chat:
@@ -124,27 +129,28 @@ async def forwarded_message_handler(client, message):
         sent_msg = await message.reply_text(
             f"Here is your link:\n\n`{generated_link}`",
             reply_markup=button,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            protect_content=True
         )
-        asyncio.create_task(delete_message_after_delay(sent_msg, 900))
+        asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
         
     except Exception as e:
         sent_err = await proc_msg.edit_text(f"❌ Error generating link: {e}")
-        asyncio.create_task(delete_message_after_delay(sent_err, 900))
+        asyncio.create_task(delete_message_after_delay(sent_err, DELETE_DELAY))
 
 
 # ==================== /GENLINK COMMAND HANDLER ====================
 @app.on_message(filters.command("genlink") & filters.private)
 async def genlink_cmd(client, message):
-    sent_msg = await message.reply_text("Send A Message For To Get Your Shareable Link")
-    asyncio.create_task(delete_message_after_delay(sent_msg, 900))
+    sent_msg = await message.reply_text("Send A Message For To Get Your Shareable Link", protect_content=True)
+    asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
 
 
 # ==================== GENERAL MESSAGE AUTO-DELETE HANDLER ====================
 @app.on_message(filters.private & ~filters.command(["start", "genlink"]) & ~filters.forwarded)
 async def general_message_handler(client, message):
-    sent_msg = await message.reply_text("⚠️ Yeh bot sirf files/links ke liye hai. Yeh message 15 minutes me delete ho jayega.")
-    asyncio.create_task(delete_message_after_delay(sent_msg, 900))
+    sent_msg = await message.reply_text("⚠️ Yeh bot sirf files/links ke liye hai. Yeh message 10 minutes me delete ho jayega.", protect_content=True)
+    asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
 
 
 # ==================== AUTO-DELETE FUNCTION ====================
