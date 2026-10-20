@@ -24,29 +24,37 @@ WELCOME_PHOTO_URL = "https://i.ibb.co/JjcNKKg4/IMG-20261003-121133-129.jpg"
 
 CHANNEL_1_NAME = "DXE Studio"
 CHANNEL_1_LINK = "https://t.me/dubxempirestudio"
-CHANNEL_1_ID = "@dubxempirestudio"  # Target Channel 1 Username ya ID
+CHANNEL_1_ID = "@dubxempirestudio"
 
 CHANNEL_2_NAME = "Join Channel 2"
 CHANNEL_2_LINK = "https://t.me/+VzwHuVRrPYljOGJl"
-CHANNEL_2_ID = -1002345678901  # Target Channel 2 ki Numeric ID (-100 se start honi chahiye)
+CHANNEL_2_ID = -1004392141410  # Aapki Exact Numeric Channel ID
 
 BOT_USERNAME = "Son_Goku_07bot"
 DELETE_DELAY = 600  # 10 minutes (600 seconds)
 
 
-# Helper Function: Check if user joined required channels
+# Helper Function: Check if user joined required channels safely
 async def check_user_joined(client, user_id):
-    try:
-        if CHANNEL_1_ID:
+    # 1. Channel 1 Verification
+    if CHANNEL_1_ID:
+        try:
             await client.get_chat_member(CHANNEL_1_ID, user_id)
-        if CHANNEL_2_ID:
+        except UserNotParticipant:
+            return False
+        except Exception as e:
+            logging.error(f"Channel 1 Check Error: {e}")
+
+    # 2. Channel 2 Verification
+    if CHANNEL_2_ID:
+        try:
             await client.get_chat_member(CHANNEL_2_ID, user_id)
-        return True
-    except UserNotParticipant:
-        return False
-    except Exception as e:
-        logging.error(f"Error checking channel membership: {e}")
-        return False
+        except UserNotParticipant:
+            return False
+        except Exception as e:
+            logging.error(f"Channel 2 Check Error: {e}")
+
+    return True
 
 
 # ==================== /START COMMAND HANDLER ====================
@@ -85,7 +93,7 @@ async def start_handler(client, message):
             asyncio.create_task(delete_message_after_delay(sent_err, DELETE_DELAY))
             return
 
-    # 2. AGAR USER JOINED NAHI HAI (First-time / Unjoined flow)
+    # 2. AGAR USER JOINED NAHI HAI
     if not is_joined:
         caption = (
             f"👋 **Hello {first_name}!**\n\n"
@@ -110,7 +118,7 @@ async def start_handler(client, message):
         asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
         return
 
-    # 3. AGAR USER ALREADY JOINED HAI (Main Dashboard flow)
+    # 3. AGAR USER ALREADY JOINED HAI
     caption = (
         f"👋 **Welcome Back {first_name}!**\n\n"
         "✨ Aap sabhi channels ke member hain. Neeche diye gaye buttons ka use karein:"
@@ -272,5 +280,5 @@ async def delete_message_after_delay(message, delay: int):
 
 
 if __name__ == "__main__":
-    print("🤖 Son Goku Bot with Force Sub & About section running...")
+    print("🤖 Son Goku Bot running successfully...")
     app.run()
