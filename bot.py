@@ -84,7 +84,6 @@ async def start_handler(client, message):
     # 1. DEEP-LINK PROCESSING (Jab user kisi file link par click karke aaye)
     if len(args) > 1:
         if not is_joined:
-            # Agar user ne join nahi kiya, tabhi yeh message aayega aur 10 min baad delete ho jayega
             warning_text = (
                 f"🚀 **To use this bot and access content, you must join our channels first:**\n\n"
                 f"1. {CHANNEL_1_LINK}\n"
@@ -99,7 +98,6 @@ async def start_handler(client, message):
             asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
             return
         
-        # Agar joined hai toh file send karega
         payload = args[1]
         try:
             if payload.startswith("post_"):
@@ -127,7 +125,7 @@ async def start_handler(client, message):
     # Image fetch karein
     photo_file = get_image_stream(WELCOME_PHOTO_URL)
 
-    # 2. NORMAL START (Jab user seedha /start kare - Hamesha clean image aur options dikhenge)
+    # 2. NORMAL START (Clean Welcome Image & Buttons)
     caption = (
         f"👋 **Welcome Back {first_name}!**\n\n"
         "✨ Aapne channels join kar liye hain. Neeche diye gaye options ka use karein:"
