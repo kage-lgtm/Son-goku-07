@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import io
+import requests
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.errors import UserNotParticipant
@@ -19,8 +21,8 @@ app = Client(
     bot_token=BOT_TOKEN
 )
 
-# Aapka Fixed ImgBB Direct Image URL
-WELCOME_PHOTO_URL = "https://i.ibb.co/6R22z7Gg/IMG-20261003-121133-129.jpg"
+# Aapka Naya Image URL
+WELCOME_PHOTO_URL = "https://pictureurl.com/api/storage/file?key=u%2Fanon%2F4b5aaa02-9ea3-4c7e-b649-a9c9cea4e03d-1000225779.jpg"
 
 # Channels Details
 CHANNEL_1_NAME = "DXE Studio"
@@ -33,6 +35,17 @@ CHANNEL_2_ID = -1004392141410  # Numeric Channel ID
 
 BOT_USERNAME = "Son_Goku_07bot"
 DELETE_DELAY = 600  # 10 minutes (600 seconds)
+
+
+# Helper Function: Download image from URL securely
+def get_image_stream(url):
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            return io.BytesIO(response.content)
+    except Exception as e:
+        logging.error(f"Image download error: {e}")
+    return None
 
 
 # Helper Function: Check if user joined required channels
@@ -91,6 +104,9 @@ async def start_handler(client, message):
             asyncio.create_task(delete_message_after_delay(sent_err, DELETE_DELAY))
             return
 
+    # Image stream fetch karein
+    photo_file = get_image_stream(WELCOME_PHOTO_URL)
+
     # 2. AGAR USER JOINED NAHI HAI
     if not is_joined:
         caption = (
@@ -104,14 +120,12 @@ async def start_handler(client, message):
         ])
         
         try:
-            sent_msg = await message.reply_photo(
-                photo=WELCOME_PHOTO_URL,
-                caption=caption,
-                reply_markup=keyboard,
-                protect_content=True
-            )
+            if photo_file:
+                sent_msg = await message.reply_photo(photo=photo_file, caption=caption, reply_markup=keyboard, protect_content=True)
+            else:
+                sent_msg = await message.reply_text(caption, reply_markup=keyboard, protect_content=True)
         except Exception as e:
-            logging.error(f"Photo error: {e}")
+            logging.error(f"Error sending photo: {e}")
             sent_msg = await message.reply_text(caption, reply_markup=keyboard, protect_content=True)
             
         asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
@@ -130,14 +144,12 @@ async def start_handler(client, message):
     ])
     
     try:
-        sent_msg = await message.reply_photo(
-            photo=WELCOME_PHOTO_URL,
-            caption=caption,
-            reply_markup=main_keyboard,
-            protect_content=True
-        )
+        if photo_file:
+            sent_msg = await message.reply_photo(photo=photo_file, caption=caption, reply_markup=main_keyboard, protect_content=True)
+        else:
+            sent_msg = await message.reply_text(caption, reply_markup=main_keyboard, protect_content=True)
     except Exception as e:
-        logging.error(f"Photo error: {e}")
+        logging.error(f"Error sending photo: {e}")
         sent_msg = await message.reply_text(caption, reply_markup=main_keyboard, protect_content=True)
         
     asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
@@ -171,7 +183,7 @@ async def callback_handler(client, callback_query: CallbackQuery):
             "✨ **ᴀʙᴏᴜᴛ ᴍᴇ**\n\n"
             "✰ **ᴍʏ ɴᴀᴍᴇ:** @Son_Goku_07bot\n"
             "✰ **ᴅᴇᴠᴇʟᴏᴘᴇʀ:** @kage_x_edit\n"
-            "✰ **ᴍʏ ᴏᴡɴᴇʀ:** @Rishu_dubs\n"
+            "✰ **ᴍʏ ᴏᴡɴᴇR:** @Rishu_dubs\n"
             "✰ **ᴜᴘᴅᴀᴛᴇs:** [kage bots](https://t.me/zyphorkagex_chat)\n"
             "✰ **sᴜᴘᴘᴏʀᴛ:** @zyphorkagex"
         )
@@ -213,7 +225,7 @@ async def callback_handler(client, callback_query: CallbackQuery):
 
 # ==================== FORWARDED POST HANDLER ====================
 @app.on_message(filters.forwarded & filters.private)
-async def forwarded_message_handler(client, message):
+async def forwarded_main_handler(client, message):
     if not await check_user_joined(client, message.from_user.id):
         sent_err = await message.reply_text("❌ Pehle /start dabakar channels join karein!", protect_content=True)
         asyncio.create_task(delete_message_after_delay(sent_err, DELETE_DELAY))
