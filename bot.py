@@ -21,7 +21,7 @@ app = Client(
     bot_token=BOT_TOKEN
 )
 
-# Aapka Naya Image URL
+# Aapka Welcome Image URL
 WELCOME_PHOTO_URL = "https://pictureurl.com/api/storage/file?key=u%2Fanon%2F4b5aaa02-9ea3-4c7e-b649-a9c9cea4e03d-1000225779.jpg"
 
 # Channels Details
@@ -37,18 +37,23 @@ BOT_USERNAME = "Son_Goku_07bot"
 DELETE_DELAY = 600  # 10 minutes (600 seconds)
 
 
-# Helper Function: Download image from URL securely
+# Helper Function: Download image securely with browser headers
 def get_image_stream(url):
     try:
-        response = requests.get(url, timeout=10)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=15)
         if response.status_code == 200:
             return io.BytesIO(response.content)
+        else:
+            logging.error(f"Image download failed with status code: {response.status_code}")
     except Exception as e:
         logging.error(f"Image download error: {e}")
     return None
 
 
-# Helper Function: Check if user joined required channels
+# Helper Function: Check if user joined required channels safely
 async def check_user_joined(client, user_id):
     if CHANNEL_1_ID:
         try:
@@ -104,10 +109,10 @@ async def start_handler(client, message):
             asyncio.create_task(delete_message_after_delay(sent_err, DELETE_DELAY))
             return
 
-    # Image stream fetch karein
+    # Image fetch karein
     photo_file = get_image_stream(WELCOME_PHOTO_URL)
 
-    # 2. AGAR USER JOINED NAHI HAI
+    # 2. AGAR USER JOINED NAHI HAI ( Image Upar, Text Niche, Buttons Sabse Niche )
     if not is_joined:
         caption = (
             f"👋 **Hello {first_name}!**\n\n"
@@ -121,17 +126,30 @@ async def start_handler(client, message):
         
         try:
             if photo_file:
-                sent_msg = await message.reply_photo(photo=photo_file, caption=caption, reply_markup=keyboard, protect_content=True)
+                sent_msg = await message.reply_photo(
+                    photo=photo_file,
+                    caption=caption,
+                    reply_markup=keyboard,
+                    protect_content=True
+                )
             else:
-                sent_msg = await message.reply_text(caption, reply_markup=keyboard, protect_content=True)
+                sent_msg = await message.reply_text(
+                    text=caption,
+                    reply_markup=keyboard,
+                    protect_content=True
+                )
         except Exception as e:
-            logging.error(f"Error sending photo: {e}")
-            sent_msg = await message.reply_text(caption, reply_markup=keyboard, protect_content=True)
+            logging.error(f"Send photo error: {e}")
+            sent_msg = await message.reply_text(
+                text=caption,
+                reply_markup=keyboard,
+                protect_content=True
+            )
             
         asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
         return
 
-    # 3. AGAR USER JOINED HAI
+    # 3. AGAR USER JOINED HAI ( Image Upar, Welcome Message Niche, Options uske niche )
     caption = (
         f"👋 **Welcome Back {first_name}!**\n\n"
         "✨ Aapne channels join kar liye hain. Neeche diye gaye options ka use karein:"
@@ -145,12 +163,25 @@ async def start_handler(client, message):
     
     try:
         if photo_file:
-            sent_msg = await message.reply_photo(photo=photo_file, caption=caption, reply_markup=main_keyboard, protect_content=True)
+            sent_msg = await message.reply_photo(
+                photo=photo_file,
+                caption=caption,
+                reply_markup=main_keyboard,
+                protect_content=True
+            )
         else:
-            sent_msg = await message.reply_text(caption, reply_markup=main_keyboard, protect_content=True)
+            sent_msg = await message.reply_text(
+                text=caption,
+                reply_markup=main_keyboard,
+                protect_content=True
+            )
     except Exception as e:
-        logging.error(f"Error sending photo: {e}")
-        sent_msg = await message.reply_text(caption, reply_markup=main_keyboard, protect_content=True)
+        logging.error(f"Send photo error: {e}")
+        sent_msg = await message.reply_text(
+            text=caption,
+            reply_markup=main_keyboard,
+            protect_content=True
+        )
         
     asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
 
@@ -171,10 +202,16 @@ async def callback_handler(client, callback_query: CallbackQuery):
                     InlineKeyboardButton("❓ Help", callback_data="help_btn")
                 ]
             ])
-            await callback_query.message.edit_caption(
-                caption=f"👋 **Welcome {callback_query.from_user.first_name}!**\n\nAapne sabhi channels join kar liye hain.",
-                reply_markup=main_keyboard
-            )
+            try:
+                await callback_query.message.edit_caption(
+                    caption=f"👋 **Welcome {callback_query.from_user.first_name}!**\n\nAapne sabhi channels join kar liye hain.",
+                    reply_markup=main_keyboard
+                )
+            except Exception:
+                await callback_query.message.edit_text(
+                    text=f"👋 **Welcome {callback_query.from_user.first_name}!**\n\nAapne sabhi channels join kar liye hain.",
+                    reply_markup=main_keyboard
+                )
         else:
             await callback_query.answer("❌ Aapne abhi tak sabhi channels join nahi kiye hain!", show_alert=True)
 
@@ -183,17 +220,17 @@ async def callback_handler(client, callback_query: CallbackQuery):
             "✨ **ᴀʙᴏᴜᴛ ᴍᴇ**\n\n"
             "✰ **ᴍʏ ɴᴀᴍᴇ:** @Son_Goku_07bot\n"
             "✰ **ᴅᴇᴠᴇʟᴏᴘᴇʀ:** @kage_x_edit\n"
-            "✰ **ᴍʏ ᴏᴡɴᴇR:** @Rishu_dubs\n"
+            "✰ **ᴍʏ ᴏᴡɴᴇʀ:** @Rishu_dubs\n"
             "✰ **ᴜᴘᴅᴀᴛᴇs:** [kage bots](https://t.me/zyphorkagex_chat)\n"
             "✰ **sᴜᴘᴘᴏʀᴛ:** @zyphorkagex"
         )
         back_keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("🔙 Back", callback_data="back_to_main")]
         ])
-        await callback_query.message.edit_caption(
-            caption=about_text,
-            reply_markup=back_keyboard
-        )
+        try:
+            await callback_query.message.edit_caption(caption=about_text, reply_markup=back_keyboard)
+        except Exception:
+            await callback_query.message.edit_text(text=about_text, reply_markup=back_keyboard)
 
     elif data == "help_btn":
         help_text = (
@@ -205,10 +242,10 @@ async def callback_handler(client, callback_query: CallbackQuery):
         back_keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("🔙 Back", callback_data="back_to_main")]
         ])
-        await callback_query.message.edit_caption(
-            caption=help_text,
-            reply_markup=back_keyboard
-        )
+        try:
+            await callback_query.message.edit_caption(caption=help_text, reply_markup=back_keyboard)
+        except Exception:
+            await callback_query.message.edit_text(text=help_text, reply_markup=back_keyboard)
 
     elif data == "back_to_main":
         main_keyboard = InlineKeyboardMarkup([
@@ -217,15 +254,21 @@ async def callback_handler(client, callback_query: CallbackQuery):
                 InlineKeyboardButton("❓ Help", callback_data="help_btn")
             ]
         ])
-        await callback_query.message.edit_caption(
-            caption=f"👋 **Welcome {callback_query.from_user.first_name}!**\n\nNeeche diye gaye options select karein:",
-            reply_markup=main_keyboard
-        )
+        try:
+            await callback_query.message.edit_caption(
+                caption=f"👋 **Welcome {callback_query.from_user.first_name}!**\n\nNeeche diye gaye options select karein:",
+                reply_markup=main_keyboard
+            )
+        except Exception:
+            await callback_query.message.edit_text(
+                text=f"👋 **Welcome {callback_query.from_user.first_name}!**\n\nNeeche diye gaye options select karein:",
+                reply_markup=main_keyboard
+            )
 
 
 # ==================== FORWARDED POST HANDLER ====================
 @app.on_message(filters.forwarded & filters.private)
-async def forwarded_main_handler(client, message):
+async def forwarded_message_handler(client, message):
     if not await check_user_joined(client, message.from_user.id):
         sent_err = await message.reply_text("❌ Pehle /start dabakar channels join karein!", protect_content=True)
         asyncio.create_task(delete_message_after_delay(sent_err, DELETE_DELAY))
@@ -262,6 +305,20 @@ async def forwarded_main_handler(client, message):
     except Exception as e:
         sent_err = await proc_msg.edit_text(f"❌ Error generating link: {e}")
         asyncio.create_task(delete_message_after_delay(sent_err, DELETE_DELAY))
+
+
+# ==================== /GENLINK COMMAND HANDLER ====================
+@app.on_message(filters.command("genlink") & filters.private)
+async def genlink_cmd(client, message):
+    sent_msg = await message.reply_text("Send A Message To Get Your Shareable Link", protect_content=True)
+    asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
+
+
+# ==================== GENERAL MESSAGE HANDLER ====================
+@app.on_message(filters.private & ~filters.command(["start", "genlink"]) & ~filters.forwarded)
+async def general_message_handler(client, message):
+    sent_msg = await message.reply_text("⚠️ Yeh bot sirf files/links ke liye hai. Yeh message 10 minutes me delete ho jayega.", protect_content=True)
+    asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
 
 
 # ==================== AUTO-DELETE FUNCTION ====================
