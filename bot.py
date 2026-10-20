@@ -7,7 +7,7 @@ from pyrogram.errors import UserNotParticipant
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 
-# Aapke Telegram Credentials
+# Telegram Credentials
 API_ID = 38215355
 API_HASH = "3f095c170be8c744b8f3d7f9c75ae544"
 BOT_TOKEN = "8555113283:AAFTY7YNDz52tNArdoeIMXpQwc8efMXTylA"
@@ -19,24 +19,24 @@ app = Client(
     bot_token=BOT_TOKEN
 )
 
-# Configuration
-WELCOME_PHOTO_URL = "https://i.ibb.co/JjcNKKg4/IMG-20261003-121133-129.jpg"
+# Nayi Welcome Image ka Direct URL
+WELCOME_PHOTO_URL = "https://files.catbox.moe/noia09.jpg"
 
+# Channels Details
 CHANNEL_1_NAME = "DXE Studio"
 CHANNEL_1_LINK = "https://t.me/dubxempirestudio"
 CHANNEL_1_ID = "@dubxempirestudio"
 
 CHANNEL_2_NAME = "Join Channel 2"
 CHANNEL_2_LINK = "https://t.me/+VzwHuVRrPYljOGJl"
-CHANNEL_2_ID = -1004392141410  # Aapki Exact Numeric Channel ID
+CHANNEL_2_ID = -1004392141410  # Numeric Channel ID
 
 BOT_USERNAME = "Son_Goku_07bot"
 DELETE_DELAY = 600  # 10 minutes (600 seconds)
 
 
-# Helper Function: Check if user joined required channels safely
+# Helper Function: Check if user joined required channels
 async def check_user_joined(client, user_id):
-    # 1. Channel 1 Verification
     if CHANNEL_1_ID:
         try:
             await client.get_chat_member(CHANNEL_1_ID, user_id)
@@ -45,7 +45,6 @@ async def check_user_joined(client, user_id):
         except Exception as e:
             logging.error(f"Channel 1 Check Error: {e}")
 
-    # 2. Channel 2 Verification
     if CHANNEL_2_ID:
         try:
             await client.get_chat_member(CHANNEL_2_ID, user_id)
@@ -64,10 +63,9 @@ async def start_handler(client, message):
     first_name = message.from_user.first_name
     args = message.command
 
-    # Check Channel Membership
     is_joined = await check_user_joined(client, user_id)
 
-    # 1. DEEP-LINK PROCESSING (Agar user file link se aaya hai aur joined hai)
+    # 1. DEEP-LINK PROCESSING (Agar user file link se aaya hai)
     if len(args) > 1 and is_joined:
         payload = args[1]
         try:
@@ -93,7 +91,7 @@ async def start_handler(client, message):
             asyncio.create_task(delete_message_after_delay(sent_err, DELETE_DELAY))
             return
 
-    # 2. AGAR USER JOINED NAHI HAI
+    # 2. AGAR USER JOINED NAHI HAI (Naye user ke liye image + channel buttons)
     if not is_joined:
         caption = (
             f"👋 **Hello {first_name}!**\n\n"
@@ -118,10 +116,10 @@ async def start_handler(client, message):
         asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
         return
 
-    # 3. AGAR USER ALREADY JOINED HAI
+    # 3. AGAR USER ALREADY JOINED HAI (Purane/Joined user ke liye image + About/Help buttons)
     caption = (
         f"👋 **Welcome Back {first_name}!**\n\n"
-        "✨ Aap sabhi channels ke member hain. Neeche diye gaye buttons ka use karein:"
+        "✨ Aapne channels join kar liye hain. Neeche diye gaye options ka use karein:"
     )
     main_keyboard = InlineKeyboardMarkup([
         [
@@ -149,7 +147,6 @@ async def callback_handler(client, callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     data = callback_query.data
 
-    # Check Joined Callback
     if data == "check_joined":
         is_joined = await check_user_joined(client, user_id)
         if is_joined:
@@ -167,7 +164,6 @@ async def callback_handler(client, callback_query: CallbackQuery):
         else:
             await callback_query.answer("❌ Aapne abhi tak sabhi channels join nahi kiye hain!", show_alert=True)
 
-    # About Button Callback
     elif data == "about_btn":
         about_text = (
             "✨ **ᴀʙᴏᴜᴛ ᴍᴇ**\n\n"
@@ -185,7 +181,6 @@ async def callback_handler(client, callback_query: CallbackQuery):
             reply_markup=back_keyboard
         )
 
-    # Help Button Callback
     elif data == "help_btn":
         help_text = (
             "❓ **ʜᴇʟᴘ & ᴜsᴀɢᴇ**\n\n"
@@ -201,7 +196,6 @@ async def callback_handler(client, callback_query: CallbackQuery):
             reply_markup=back_keyboard
         )
 
-    # Back Button Callback
     elif data == "back_to_main":
         main_keyboard = InlineKeyboardMarkup([
             [
@@ -254,20 +248,6 @@ async def forwarded_message_handler(client, message):
     except Exception as e:
         sent_err = await proc_msg.edit_text(f"❌ Error generating link: {e}")
         asyncio.create_task(delete_message_after_delay(sent_err, DELETE_DELAY))
-
-
-# ==================== /GENLINK COMMAND HANDLER ====================
-@app.on_message(filters.command("genlink") & filters.private)
-async def genlink_cmd(client, message):
-    sent_msg = await message.reply_text("Send A Message To Get Your Shareable Link", protect_content=True)
-    asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
-
-
-# ==================== GENERAL MESSAGE HANDLER ====================
-@app.on_message(filters.private & ~filters.command(["start", "genlink"]) & ~filters.forwarded)
-async def general_message_handler(client, message):
-    sent_msg = await message.reply_text("⚠️ Yeh bot sirf files/links ke liye hai. Yeh message 10 minutes me delete ho jayega.", protect_content=True)
-    asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
 
 
 # ==================== AUTO-DELETE FUNCTION ====================
