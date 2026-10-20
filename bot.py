@@ -46,8 +46,6 @@ def get_image_stream(url):
         response = requests.get(url, headers=headers, timeout=15)
         if response.status_code == 200:
             return io.BytesIO(response.content)
-        else:
-            logging.error(f"Image download failed with status code: {response.status_code}")
     except Exception as e:
         logging.error(f"Image download error: {e}")
     return None
@@ -83,8 +81,25 @@ async def start_handler(client, message):
 
     is_joined = await check_user_joined(client, user_id)
 
-    # 1. DEEP-LINK PROCESSING (Agar user file link se aaya hai)
-    if len(args) > 1 and is_joined:
+    # 1. DEEP-LINK PROCESSING (Jab user kisi file link par click karke aaye)
+    if len(args) > 1:
+        if not is_joined:
+            # Agar user ne join nahi kiya, tabhi yeh message aayega aur 10 min baad delete ho jayega
+            warning_text = (
+                f"🚀 **To use this bot and access content, you must join our channels first:**\n\n"
+                f"1. {CHANNEL_1_LINK}\n"
+                f"2. {CHANNEL_2_LINK}"
+            )
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton(CHANNEL_1_NAME, url=CHANNEL_1_LINK)],
+                [InlineKeyboardButton(CHANNEL_2_NAME, url=CHANNEL_2_LINK)],
+                [InlineKeyboardButton("✅ I HAVE JOINED", callback_data="check_joined")]
+            ])
+            sent_msg = await message.reply_text(warning_text, reply_markup=keyboard, protect_content=True)
+            asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
+            return
+        
+        # Agar joined hai toh file send karega
         payload = args[1]
         try:
             if payload.startswith("post_"):
@@ -112,44 +127,7 @@ async def start_handler(client, message):
     # Image fetch karein
     photo_file = get_image_stream(WELCOME_PHOTO_URL)
 
-    # 2. AGAR USER JOINED NAHI HAI ( Image Upar, Text Niche, Buttons Sabse Niche )
-    if not is_joined:
-        caption = (
-            f"👋 **Hello {first_name}!**\n\n"
-            "✨ Bot ka istemaal karne ke liye kripya neeche diye gaye dono channels ko join karein!"
-        )
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(CHANNEL_1_NAME, url=CHANNEL_1_LINK)],
-            [InlineKeyboardButton(CHANNEL_2_NAME, url=CHANNEL_2_LINK)],
-            [InlineKeyboardButton("✅ I HAVE JOINED", callback_data="check_joined")]
-        ])
-        
-        try:
-            if photo_file:
-                sent_msg = await message.reply_photo(
-                    photo=photo_file,
-                    caption=caption,
-                    reply_markup=keyboard,
-                    protect_content=True
-                )
-            else:
-                sent_msg = await message.reply_text(
-                    text=caption,
-                    reply_markup=keyboard,
-                    protect_content=True
-                )
-        except Exception as e:
-            logging.error(f"Send photo error: {e}")
-            sent_msg = await message.reply_text(
-                text=caption,
-                reply_markup=keyboard,
-                protect_content=True
-            )
-            
-        asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
-        return
-
-    # 3. AGAR USER JOINED HAI ( Image Upar, Welcome Message Niche, Options uske niche )
+    # 2. NORMAL START (Jab user seedha /start kare - Hamesha clean image aur options dikhenge)
     caption = (
         f"👋 **Welcome Back {first_name}!**\n\n"
         "✨ Aapne channels join kar liye hain. Neeche diye gaye options ka use karein:"
@@ -311,13 +289,6 @@ async def forwarded_message_handler(client, message):
 @app.on_message(filters.command("genlink") & filters.private)
 async def genlink_cmd(client, message):
     sent_msg = await message.reply_text("Send A Message To Get Your Shareable Link", protect_content=True)
-    asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
-
-
-# ==================== GENERAL MESSAGE HANDLER ====================
-@app.on_message(filters.private & ~filters.command(["start", "genlink"]) & ~filters.forwarded)
-async def general_message_handler(client, message):
-    sent_msg = await message.reply_text("⚠️ Yeh bot sirf files/links ke liye hai. Yeh message 10 minutes me delete ho jayega.", protect_content=True)
     asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
 
 
