@@ -19,8 +19,8 @@ app = Client(
     bot_token=BOT_TOKEN
 )
 
-# Nayi Welcome Image ka Direct URL
-WELCOME_PHOTO_URL = "https://files.catbox.moe/noia09.jpg"
+# Aapka Fixed ImgBB Direct Image URL
+WELCOME_PHOTO_URL = "https://i.ibb.co/6R22z7Gg/IMG-20261003-121133-129.jpg"
 
 # Channels Details
 CHANNEL_1_NAME = "DXE Studio"
@@ -91,7 +91,7 @@ async def start_handler(client, message):
             asyncio.create_task(delete_message_after_delay(sent_err, DELETE_DELAY))
             return
 
-    # 2. AGAR USER JOINED NAHI HAI (Naye user ke liye image + channel buttons)
+    # 2. AGAR USER JOINED NAHI HAI
     if not is_joined:
         caption = (
             f"👋 **Hello {first_name}!**\n\n"
@@ -110,13 +110,14 @@ async def start_handler(client, message):
                 reply_markup=keyboard,
                 protect_content=True
             )
-        except Exception:
+        except Exception as e:
+            logging.error(f"Photo error: {e}")
             sent_msg = await message.reply_text(caption, reply_markup=keyboard, protect_content=True)
             
         asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
         return
 
-    # 3. AGAR USER ALREADY JOINED HAI (Purane/Joined user ke liye image + About/Help buttons)
+    # 3. AGAR USER JOINED HAI
     caption = (
         f"👋 **Welcome Back {first_name}!**\n\n"
         "✨ Aapne channels join kar liye hain. Neeche diye gaye options ka use karein:"
@@ -135,7 +136,8 @@ async def start_handler(client, message):
             reply_markup=main_keyboard,
             protect_content=True
         )
-    except Exception:
+    except Exception as e:
+        logging.error(f"Photo error: {e}")
         sent_msg = await message.reply_text(caption, reply_markup=main_keyboard, protect_content=True)
         
     asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
