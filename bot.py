@@ -21,7 +21,7 @@ app = Client(
     bot_token=BOT_TOKEN
 )
 
-# Aapka Welcome Image URL
+# Aapka Welcome Image URL (DXE Studio Logo)
 WELCOME_PHOTO_URL = "https://pictureurl.com/api/storage/file?key=u%2Fanon%2F4b5aaa02-9ea3-4c7e-b649-a9c9cea4e03d-1000225779.jpg"
 
 # Channels Details
@@ -81,9 +81,10 @@ async def start_handler(client, message):
 
     is_joined = await check_user_joined(client, user_id)
 
-    # 1. DEEP-LINK PROCESSING (Jab user kisi file link par click karke aaye)
+    # 1. DEEP-LINK PROCESSING (Jab user kisi shareable link se content lene aaye)
     if len(args) > 1:
         if not is_joined:
+            # Agar user ne join nahi kiya hai, tabhi join warning dikhegi jo 10 min mein auto-delete ho jayegi
             warning_text = (
                 f"🚀 **To use this bot and access content, you must join our channels first:**\n\n"
                 f"1. {CHANNEL_1_LINK}\n"
@@ -98,6 +99,7 @@ async def start_handler(client, message):
             asyncio.create_task(delete_message_after_delay(sent_msg, DELETE_DELAY))
             return
         
+        # Joined user ke liye content fetch karke bhejna
         payload = args[1]
         try:
             if payload.startswith("post_"):
@@ -125,7 +127,7 @@ async def start_handler(client, message):
     # Image fetch karein
     photo_file = get_image_stream(WELCOME_PHOTO_URL)
 
-    # 2. NORMAL START (Clean Welcome Image & Buttons)
+    # 2. NORMAL START (Jab user direct /start kare - Safe Clean Welcome UI)
     caption = (
         f"👋 **Welcome Back {first_name}!**\n\n"
         "✨ Aapne channels join kar liye hain. Neeche diye gaye options ka use karein:"
@@ -195,8 +197,8 @@ async def callback_handler(client, callback_query: CallbackQuery):
         about_text = (
             "✨ **ᴀʙᴏᴜᴛ ᴍᴇ**\n\n"
             "✰ **ᴍʏ ɴᴀᴍᴇ:** @Son_Goku_07bot\n"
-            "✰ **ᴅᴇᴠᴇʟᴏᴘᴇʀ:** @kage_x_edit\n"
-            "✰ **ᴍʏ ᴏᴡɴᴇʀ:** @Rishu_dubs\n"
+            "✰ **ᴅᴇᴠᴇʟᴏᴘᴇR:** @kage_x_edit\n"
+            "✰ **ᴍʏ ᴏᴡɴᴇR:** @Rishu_dubs\n"
             "✰ **ᴜᴘᴅᴀᴛᴇs:** [kage bots](https://t.me/zyphorkagex_chat)\n"
             "✰ **sᴜᴘᴘᴏʀᴛ:** @zyphorkagex"
         )
